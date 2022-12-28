@@ -95,37 +95,40 @@ export default {
       // 대한민국은 맨 마지막 999번이고, 특별히 도움되는 정보가 없으므로 제외
       this.exchanges.pop();
     },
-    // 이 함수는 재귀함수다.
     async getExchangeData(date) {
-      const parsedDate = date.format("YYYY-MM-DD");
-      // 해당 API 사용 시, 프록시서버를 두어야만 CORS 해결됨
-      // 개발 과정에선 단순히 크롬 CORS 익스텐션 설치해서 테스트함
-      const URL =
-        "https://www.koreaexim.go.kr/site/program/financial/exchangeJSON";
-      const params = {
-        authkey: "API 키를 입력하시오",
-        data: "AP01",
-        searchdate: parsedDate,
-      };
-      try {
-        const response = await axios.get(URL, {
-          params: params,
-        });
-        if (response.data) {
-          // 주말이나 공휴일, 평일 오전 10시 이전은 환율 정보가 빈 배열 [] 로 옴
-          // 따라서, getExchangeData 를 재귀로 작동시켜, 유효한 배열이 올때까지 시도
-          // 무한루프 주의. API 일일 횟수제한이 있으니 테스트 시 setTimeout 사용 추천
-          if (response.data.length === 0) {
-            // dayjs 에서 날짜 하루 뺄 때는 subtract 사용
-            // 즉, 빈 배열 [] 이면 하루씩 빼가면서 계속 시도
-            this.getExchangeData(date.subtract(1, "day"));
-          } else {
-            // 유효한 배열을 받았을 시, 파싱함수 작동시켜 패치
-            this.parseExchanges(response.data);
+      // 주말이나 공휴일, 평일 오전 10시 이전은 환율 정보가 빈 배열 [] 로 옴
+      // 휴일은 아무리 길어도 열 번을 넘지 않기 때문에,
+      // 열 번 안에 유효값이 나오면 종료
+      for (let i = 0; i < 10; i++) {
+        // API 사용을 위해 날짜 파싱
+        const parsedDate = date.format("YYYY-MM-DD");
+        // 해당 API 사용 시, 프록시서버를 두어야만 CORS 해결됨
+        // 개발 과정에선 단순히 크롬 CORS 익스텐션 설치해서 테스트함
+        const URL =
+          "https://www.koreaexim.go.kr/site/program/financial/exchangeJSON";
+        const params = {
+          authkey: "kQFw9ip9VATZDdPmokPB3WDXgpP9qfwK",
+          data: "AP01",
+          searchdate: parsedDate,
+        };
+        try {
+          const response = await axios.get(URL, {
+            params: params,
+          });
+          if (response.data) {
+            if (response.data.length === 0) {
+              // dayjs 에서 날짜 하루 뺄 때는 subtract 사용
+              // 즉, 빈 배열 [] 이면 하루씩 빼가면서 계속 시도
+              date = date.subtract(1, "day");
+            } else {
+              // 유효한 배열을 받았을 시, 파싱함수 작동시켜 패치
+              this.parseExchanges(response.data);
+              break;
+            }
           }
+        } catch (error) {
+          console.log(error);
         }
-      } catch (error) {
-        console.log(error);
       }
     },
   },
