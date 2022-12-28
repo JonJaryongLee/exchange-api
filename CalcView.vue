@@ -26,7 +26,7 @@ export default {
     };
   },
   created() {
-    const now = dayjs("2022-12-25");
+    const now = dayjs();
     this.getExchangeData(now);
   },
   methods: {
